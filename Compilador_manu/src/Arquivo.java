@@ -11,20 +11,19 @@ public class Arquivo {
 	private FileReader fr;
 	private int linha;
 	private int coluna;
-	private String linha_atual;
+	private int linha_marc;
+	private int coluna_marc;
 
 	// *-----> Construtor
 	public Arquivo(String path) {
 		this.path = path;
 		this.linha = 1;
-		this.coluna = 1;
+		this.coluna = 0;
 		File arquivo = new File(this.path);
 		if (arquivo.exists() == true) { // Se arquivo existe
 			try {
 				FileReader fr = new FileReader(arquivo);
 				BufferedReader br = new BufferedReader(fr);
-				//br.mark(0);
-				this.linha_atual = br.readLine();
 				this.fr = fr;
 				this.br = br;
 			} catch (IOException ioExeception) {
@@ -38,7 +37,7 @@ public class Arquivo {
 		this.path = path;
 	}
 	
-	// *-----> Get Linha e coluna
+	// *-----> Get 
 	public int getlinha() {
 		return this.linha;
 	}
@@ -46,14 +45,35 @@ public class Arquivo {
 	public int getColuna() {
 		return this.coluna;
 	}
+	
+	public BufferedReader getBR() {
+		return this.br;
+	}
 
 	// *-----> Ler arquivo
-	public char readCaracter() throws IOException {
-		long lineNo = this.br.lines().count();
-		attLinhaColuna(this.br.readLine());
-		char caracter = (char) this.br.read();
+	public String readCaracter() throws IOException {
 		
-		return caracter;
+		String Carc_String ;
+ 		int carac_int = this.br.read();
+		char caracter = (char) carac_int;
+		 
+		while(caracter == '\n' || caracter == '\r' || caracter == ' ') { // Pulou a linha
+			if(caracter == '\r') {
+				this.linha ++;
+				this.coluna = 0;
+			}
+			carac_int = this.br.read();
+			caracter = (char) carac_int;
+		}
+		
+		if(carac_int == -1) { //Fim de arquivo
+			Carc_String = "EOF";
+		}else {
+			this.coluna ++;
+			Carc_String = Character.toString(caracter);
+		}
+
+		return Carc_String;
 	}
 
 	// *-----> Fechar Arquivo
@@ -63,14 +83,17 @@ public class Arquivo {
 		System.out.println("Arquivo Fechado!");
 	}
 	
-	// *-----> Calcular linha e coluna
-	public void attLinhaColuna(String TextoLinha) {
-		if(TextoLinha.equals(this.linha_atual)) {
-			this.coluna ++;
-		}else {
-			this.linha_atual = TextoLinha;
-			this.linha ++;
-			this.coluna = 1;
-		}
+	//*----> Marcar o local no arquivo para voltar 
+	public void marcar() throws IOException {
+		this.linha_marc = this.linha;
+		this.coluna_marc = this.coluna;
+		this.br.mark(0);
+	}
+	
+	//*----> Voltar para onde foi marcado
+	public void reset() throws IOException {
+		this.linha = this.linha_marc;
+		this.coluna = this.coluna_marc;
+		this.br.reset();
 	}
 }
