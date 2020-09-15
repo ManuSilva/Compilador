@@ -18,6 +18,8 @@ public class Main {
         	System.out.println("Linha:" + o_arq.getlinha() + " Coluna:" + o_arq.getColuna() + " Caracter:" + o_arq.readCaracter());
         	System.out.println("Linha:" + o_arq.getlinha() + " Coluna:" + o_arq.getColuna() + " Caracter:" + o_arq.readCaracter());
         	
+        	System.out.println("Testando GitHub");
+        	
         	o_arq.fecharArquivo();
         }
         
