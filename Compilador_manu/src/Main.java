@@ -12,14 +12,7 @@ public class Main {
         	
         	Scanner scanner = new Scanner(o_arq);
         	scanner.verificLexico();
-        	/*String caracter = o_arq.readCaracter();
-        	
-        	while(caracter != "EOF") {
-        		System.out.println("Linha:" + o_arq.getlinha() + " Coluna:" + o_arq.getColuna() + " Caracter:" + caracter);
-        		caracter = o_arq.readCaracter();
-        	}
-        	System.out.println("Linha:" + o_arq.getlinha() + " Coluna:" + o_arq.getColuna() + " Caracter:" + caracter);
-        	o_arq.fecharArquivo();*/
+
         }
         
 	}

@@ -1,7 +1,6 @@
 
 import java.io.File;
 import java.io.IOException;
-import java.util.stream.Stream;
 import java.io.BufferedReader;
 import java.io.FileReader;
 
@@ -36,40 +35,41 @@ public class Arquivo {
 	public void setPath(String path) {
 		this.path = path;
 	}
-	
-	// *-----> Get 
+
+	// *-----> Get
 	public int getlinha() {
 		return this.linha;
 	}
-	
+
 	public int getColuna() {
 		return this.coluna;
 	}
-	
+
 	public BufferedReader getBR() {
 		return this.br;
 	}
 
 	// *-----> Ler arquivo
 	public String readCaracter() throws IOException {
-		
-		String Carc_String ;
- 		int carac_int = this.br.read();
+
+		String Carc_String;
+		int carac_int = this.br.read();
 		char caracter = (char) carac_int;
-		 
-		while(caracter == '\n' || caracter == '\r' || caracter == ' ') { // Pulou a linha
-			if(caracter == '\r') {
-				this.linha ++;
-				this.coluna = 0;
-			}
-			carac_int = this.br.read();
-			caracter = (char) carac_int;
-		}
-		
-		if(carac_int == -1) { //Fim de arquivo
-			Carc_String = "EOF";
+
+		if (carac_int == -1) { // Fim de arquivo
+			Carc_String = "$";
+		} else if (caracter == '\r') {                   //Fim de linha
+			this.linha++;
+			this.coluna = 0;
+			Carc_String = Character.toString(caracter); 
+		} else if (caracter == '\n'){                   //Pula linha
+			this.coluna = 0;
+			Carc_String = Character.toString(caracter);  
+		} else if (caracter == '\t'){                   // Tab
+			this.coluna = coluna + 4;
+			Carc_String = Character.toString(caracter);
 		}else {
-			this.coluna ++;
+			this.coluna++;
 			Carc_String = Character.toString(caracter);
 		}
 
@@ -82,15 +82,15 @@ public class Arquivo {
 		fr.close();
 		System.out.println("Arquivo Fechado!");
 	}
-	
-	//*----> Marcar o local no arquivo para voltar 
+
+	// *----> Marcar o local no arquivo para voltar
 	public void marcar() throws IOException {
 		this.linha_marc = this.linha;
 		this.coluna_marc = this.coluna;
 		this.br.mark(0);
 	}
-	
-	//*----> Voltar para onde foi marcado
+
+	// *----> Voltar para onde foi marcado
 	public void reset() throws IOException {
 		this.linha = this.linha_marc;
 		this.coluna = this.coluna_marc;
