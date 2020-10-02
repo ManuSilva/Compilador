@@ -239,8 +239,6 @@ public class Scanner {
 				}
 
 			} else if (la.equals("*")) { // Coméntario Multilinha
-				//la = this.arq.readCaracter();
-				// if (la.equals("/")) {
 				la = this.arq.readCaracter();
 				// Encontrar o comando para fecha comentário (/*)
 				do {
@@ -270,7 +268,6 @@ public class Scanner {
 					la = arq.readCaracter();
 					valid = true;
 				}
-				// }
 			}
 		}
 
