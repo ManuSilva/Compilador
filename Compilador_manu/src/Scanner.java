@@ -5,7 +5,7 @@ public class Scanner {
 	private Arquivo arq;
 	private String Lockahead;
 	private Token token;
-	
+
 	// *------------------Erros Scanner----------------------*
 	static String erroFloatMalFormado = "Valor Float mal formado";
 	static String erroComentarioMult = "Comando de comentário multilha não foi fechado, fim do arquivo alcançado";
@@ -18,7 +18,7 @@ public class Scanner {
 	public Scanner(Arquivo arq) throws IOException {
 		this.arq = arq;
 		this.Lockahead = arq.readCaracter();
-		Token token = new Token("","");
+		Token token = new Token("", "");
 		this.token = token;
 	}
 
@@ -30,9 +30,9 @@ public class Scanner {
 	// *-----> Verificação Léxica
 	public void verificLexico() throws IOException {
 
-		while (!this.Lockahead.equals("$")) { // Enquanto não chega no Fim de arquivo
-			if (!this.Lockahead.equals("\r") && !this.Lockahead.equals("\n")    //Ignorar sinal de pula linha 
-		     && !this.Lockahead.equals(" ")  && !this.Lockahead.equals("\t")) { // Ignorar espaços em branco 
+		while (!this.Lockahead.equals("EOF")) { // Enquanto não chega no Fim de arquivo
+			if (!this.Lockahead.equals("\r") && !this.Lockahead.equals("\n") // Ignorar sinal de pula linha
+					&& !this.Lockahead.equals(" ") && !this.Lockahead.equals("\t")) { // Ignorar espaços em branco
 
 				if (!isComentario()) { // Ignorar Comentários
 					if (isID()) { // ID
@@ -40,15 +40,15 @@ public class Scanner {
 						exibirToken();
 					} else if (isInt_Float()) { // Inteiro ou Float
 						exibirToken();
-					}else if (isRelacional()) { // Operadores Relaicionais
+					} else if (isRelacional()) { // Operadores Relaicionais
 						exibirToken();
-					}else if (isAritimetico()) { // Operadores Aritiméticos
+					} else if (isAritimetico()) { // Operadores Aritiméticos
 						exibirToken();
-					}else if (isChar()) {     // Char
+					} else if (isChar()) { // Char
 						exibirToken();
-					}else if (isCaracterEspecial()) { // Caracter Especial
+					} else if (isCaracterEspecial()) { // Caracter Especial
 						exibirToken();
-					}else {
+					} else {
 						disparaErro(erroCaracterInvalido);
 					}
 				}
@@ -135,13 +135,13 @@ public class Scanner {
 			valid = false;
 			lexama = lexama.concat(la);
 			la = arq.readCaracter();
-			
-			if(isDigito(la)) {
+
+			if (isDigito(la)) {
 				valid = true; // Float
 				clasifc = Clasifc.Float.get();
 				lexama = lexama.concat(la);
 				la = arq.readCaracter();
-				
+
 				while (isDigito(la)) {
 					lexama = lexama.concat(la);
 					la = arq.readCaracter();
@@ -151,7 +151,7 @@ public class Scanner {
 					valid = false;
 					disparaErro(erroFloatMalFormado);
 				}
-			}else {
+			} else {
 				valid = false;
 				disparaErro(erroFloatMalFormado);
 			}
@@ -234,43 +234,43 @@ public class Scanner {
 				valid = true;
 
 				// Passar o lookahead para o final da linha ou até acabar o arquivo
-				while (!la.equals("\r") && !la.equals("$")) {
+				while (!la.equals("\r") && !la.equals("EOF")) {
 					la = arq.readCaracter();
 				}
 
-			}
-		} else if (la.equals("*")) { // Coméntario Multilinha
-			la = this.arq.readCaracter();
-			if (la.equals("/")) {
+			} else if (la.equals("*")) { // Coméntario Multilinha
+				//la = this.arq.readCaracter();
+				// if (la.equals("/")) {
 				la = this.arq.readCaracter();
 				// Encontrar o comando para fecha comentário (/*)
 				do {
 
-					while (!la.equals("/") && !la.equals("$")) {
+					while (!la.equals("*") && !la.equals("EOF")) {
 						la = arq.readCaracter();
 					}
-					if (la.equals("$")) {
+					if (la.equals("EOF")) {
 						break;
 					} else {
 						la = arq.readCaracter();
 
-						if (la.equals("*")) {
+						if (la.equals("/")) {
 							break;
-						}else {
+						} else {
 							la = arq.readCaracter();
 						}
 					}
 
-				} while (!la.equals("$")); // Enquanto não chega no final do arquivo
+				} while (!la.equals("EOF")); // Enquanto não chega no final do arquivo
 
 				// Se chegou no final do arquivo sem fechar o comentario multilinha
-				if (la.equals("$")) {
+				if (la.equals("EOF")) {
 					valid = false;
 					disparaErro(erroComentarioMult);
 				} else {
 					la = arq.readCaracter();
 					valid = true;
 				}
+				// }
 			}
 		}
 
@@ -336,9 +336,9 @@ public class Scanner {
 				clasifc = Clasifc.Igual_Diferente.get();
 				lexama = lexama.concat(la);
 				la = arq.readCaracter();
-			}else{
+			} else {
 				valid = false;
-				disparaErro(erroExclamacao); //Exclamação (‘!’) não seguida de ‘=’
+				disparaErro(erroExclamacao); // Exclamação (‘!’) não seguida de ‘=’
 			}
 		}
 
@@ -352,15 +352,16 @@ public class Scanner {
 
 		return valid;
 	}
+
 	// *-----> Operadores Aritiméticos
 	public boolean isAritimetico() throws IOException {
 		boolean valid = false;
 		String la = this.Lockahead;
 		String lexama = "";
 		String clasifc = "";
-		
+
 		this.arq.marcar(); // Marcar o local no arquivo para voltar caso não foi classificado o token
-		
+
 		switch (la) {
 		case "+":
 			valid = true;
@@ -400,59 +401,58 @@ public class Scanner {
 
 		return valid;
 	}
-	
+
 	// *-----> Char
 	public boolean isChar() throws IOException {
 		boolean valid = false;
 		String la = this.Lockahead;
 		String lexama = "";
-		
+
 		this.arq.marcar(); // Marcar o local no arquivo para voltar caso não foi classificado o token
-		
-		if(la.equals("'")) {
+
+		if (la.equals("'")) {
 			lexama = lexama.concat(la);
 			la = arq.readCaracter();
-			
-			if(isLetra(la) || isDigito(la)){
-				
+
+			if (isLetra(la) || isDigito(la)) {
+
 				lexama = lexama.concat(la);
 				la = arq.readCaracter();
-				
-				if(la.equals("'")) {
+
+				if (la.equals("'")) {
 					valid = true;
 					lexama = lexama.concat(la);
 					la = arq.readCaracter();
-				}else {
+				} else {
 					valid = false;
-					disparaErro(erroCharMalFormado); 
+					disparaErro(erroCharMalFormado);
 				}
-			}else {
+			} else {
 				valid = false;
-				disparaErro(erroCharMalFormado); 
+				disparaErro(erroCharMalFormado);
 			}
 		}
-		
-		
+
 		if (!valid) {
 			this.arq.reset(); // Voltar ponto no arquivo caso não foi classificado o token
 		} else {
-			Token token = new Token(lexama,Clasifc.Char.get());
+			Token token = new Token(lexama, Clasifc.Char.get());
 			this.token = token;
 			this.Lockahead = la;
 		}
-		
+
 		return valid;
 	}
-	
+
 	// *-----> Caracter Especial
 	public boolean isCaracterEspecial() throws IOException {
 		boolean valid = false;
 		String la = this.Lockahead;
 		String lexama = "";
 		String clasifc = "";
-		
+
 		this.arq.marcar(); // Marcar o local no arquivo para voltar caso não foi classificado o token
-		
+
 		switch (la) {
 		case ")":
 			valid = true;
@@ -486,8 +486,7 @@ public class Scanner {
 			break;
 		default:
 		}
-		
-		
+
 		if (!valid) {
 			this.arq.reset(); // Voltar ponto no arquivo caso não foi classificado o token
 		} else {
@@ -495,11 +494,11 @@ public class Scanner {
 			this.token = token;
 			this.Lockahead = arq.readCaracter();
 		}
-		
+
 		return valid;
-		
+
 	}
-	
+
 	// *-----> Exibir Token
 	public void exibirToken() {
 

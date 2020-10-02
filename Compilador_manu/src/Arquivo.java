@@ -44,6 +44,7 @@ public class Arquivo {
 	public int getColuna() {
 		return this.coluna;
 	}
+	
 
 	public BufferedReader getBR() {
 		return this.br;
@@ -52,12 +53,12 @@ public class Arquivo {
 	// *-----> Ler arquivo
 	public String readCaracter() throws IOException {
 
-		String Carc_String;
+		String Carc_String = "";
 		int carac_int = this.br.read();
 		char caracter = (char) carac_int;
 
 		if (carac_int == -1) { // Fim de arquivo
-			Carc_String = "$";
+			Carc_String = "EOF";
 		} else if (caracter == '\r') {                   //Fim de linha
 			this.linha++;
 			this.coluna = 0;
