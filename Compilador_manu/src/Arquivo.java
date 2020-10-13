@@ -62,10 +62,10 @@ public class Arquivo {
 		} else if (caracter == '\r') {                  //Fim de linha
 			this.linha++;
 			this.coluna = 0;
-			Carc_String = Character.toString(caracter); 
+			Carc_String = Character.toString(caracter);
 		} else if (caracter == '\n'){                   //Pula linha
 			this.coluna = 0;
-			Carc_String = Character.toString(caracter);  
+			Carc_String = Character.toString(caracter);
 		} else if (caracter == '\t'){                   // Tab
 			this.coluna = coluna + 4;
 			Carc_String = Character.toString(caracter);

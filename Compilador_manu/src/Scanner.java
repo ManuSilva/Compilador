@@ -41,31 +41,25 @@ public class Scanner {
 		}
 
 		if (!this.Lockahead.equals("EOF")) {
-			isComentario(); // Ignorar Comentários
-			//if (!isComentario()) { // Ignorar Comentários
-				if (isID()) { // ID
-					isPalavraReservada(); // Palavra Reservada
-					// exibirToken();
-					token = this.token;
-				} else if (isInt_Float()) { // Inteiro ou Float
-					// exibirToken();
-					token = this.token;
-				} else if (isRelacional()) { // Operadores Relaicionais
-					// exibirToken();
-					token = this.token;
-				} else if (isAritimetico()) { // Operadores Aritiméticos
-					// exibirToken();
-					token = this.token;
-				} else if (isChar()) { // Char
-					// exibirToken();
-					token = this.token;
-				} else if (isCaracterEspecial()) { // Caracter Especial
-					// exibirToken();
-					token = this.token;
-				} else {
-					disparaErro(erroCaracterInvalido);
-				}
-			//}
+			// Ignorar Comentários
+			ignoraComentario();
+
+			if (isID()) { // ID
+				isPalavraReservada(); // Palavra Reservada
+				token = this.token;
+			} else if (isInt_Float()) { // Inteiro ou Float
+				token = this.token;
+			} else if (isRelacional()) { // Operadores Relaicionais
+				token = this.token;
+			} else if (isAritimetico()) { // Operadores Aritiméticos
+				token = this.token;
+			} else if (isChar()) { // Char
+				token = this.token;
+			} else if (isCaracterEspecial()) { // Caracter Especial
+				token = this.token;
+			} else {
+				disparaErro(erroCaracterInvalido);
+			}
 		} else {
 			// Fechar o arquivo
 			this.arq.fecharArquivo();
@@ -73,6 +67,14 @@ public class Scanner {
 
 		return token;
 
+	}
+
+	// Ignorar Comentarios
+	public void ignoraComentario() throws IOException {
+		boolean flag_comentario = false;
+		do {
+			flag_comentario = isComentario(); 
+		}while(flag_comentario);
 	}
 
 	// *-----> Letra
@@ -186,7 +188,7 @@ public class Scanner {
 		String lexama = this.token.getLexama();
 		String clasifc = "";
 
-		switch (lexama) {
+		switch (lexama.toUpperCase()) {
 		case "MAIN":
 			valid = true;
 			clasifc = Clasifc.MAIN.get();
@@ -234,7 +236,7 @@ public class Scanner {
 	}
 
 	// *-----> Comentário
-	public void isComentario() throws IOException {
+	public boolean isComentario() throws IOException {
 		boolean valid = false;
 		String la = this.Lockahead;
 
@@ -265,8 +267,6 @@ public class Scanner {
 
 						if (la.equals("/")) {
 							break;
-						} else {
-							la = arq.readCaracter();
 						}
 					}
 
@@ -291,8 +291,7 @@ public class Scanner {
 			}
 			this.Lockahead = la;
 		}
-
-		//return valid;
+		return valid;
 	}
 
 	// *-----> Operadores Relacionais

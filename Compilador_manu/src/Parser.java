@@ -10,7 +10,7 @@ public class Parser {
 
 	// *------------------Erros Parser----------------------*
 	static String erroIntMain = "O programa deve inciar com o comando 'INT MAIN()' corretamente";
-	static String erroBlocoAbre = "O Bloco deve ser inciado com '{' ";
+	static String erroBlocoAbre = "O Bloco deve ser inciado somente com '{' ";
 	static String erroBlocoFecha = "O Bloco deve ser Finalizado com '}' ";
 	static String erroDeclaraVariavel = "Declaração de Variável inválida";
 	static String erroPontoVirgula = "Falta ';' para complentar o argumento";
@@ -31,6 +31,9 @@ public class Parser {
 	static String erroAritTermo = "Termo incorreto para operação aritimética";
 	static String erroAritFator = "Fator incorreto para operação aritimética";
 	static String erroCodigoFim = "Não é permitido código após o 'INT MAIN()'";
+	static String erroVirgulaDeclara = "Necessário de vírgula entre as variáveis na declaração";
+	static String erroVariavelInvalida = "Variável posicionada de forma inválida";
+	
 	// *-----------------------------------------------------*
 
 	// *-----> Construtor
@@ -47,7 +50,7 @@ public class Parser {
 		this.LastToken = this.Lockahead;
 		this.linha_lida = this.scanner.getArquivo().getlinha();
 		this.coluna_lida = this.scanner.getArquivo().getColuna();
-		this.Lockahead = this.scanner.verificLexico();
+	 this.Lockahead = this.scanner.verificLexico();
 
 	}
 
@@ -100,9 +103,28 @@ public class Parser {
 			// Um ou mais Declaração ou Comando
 			readToken();
 			do {
-				validDeclaracao = isDeclararVariavel();
-				validComando = isComando();
-			} while (validDeclaracao || validComando);
+				validComando = false;
+				valid = false;
+				if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())
+						|| this.Lockahead.getClasifica().equals(Clasifc.Abre_Chaves.get())
+						|| this.Lockahead.getClasifica().equals(Clasifc.WHILE.get())
+						|| this.Lockahead.getClasifica().equals(Clasifc.DO.get())
+						|| this.Lockahead.getClasifica().equals(Clasifc.IF.get())){
+					validComando = isComando();
+				}
+				
+				else if (this.Lockahead.getClasifica().equals(Clasifc.INT.get())
+						|| this.Lockahead.getClasifica().equals(Clasifc.FLOAT.get())
+						|| this.Lockahead.getClasifica().equals(Clasifc.CHAR.get())) {
+					validDeclaracao = isDeclararVariavel();
+				}
+				
+				else if(!this.Lockahead.getClasifica().equals(Clasifc.Fecha_Chaves.get())) {
+					disparaErro(erroVariavelInvalida);
+				}
+
+			} while (!this.Lockahead.getClasifica().equals(Clasifc.Fecha_Chaves.get()));
+
 
 			if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Chaves.get())) { // '}'
 				valid = true;
@@ -127,12 +149,10 @@ public class Parser {
 			readToken();
 			if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
 				readToken();
-				if (this.Lockahead.getClasifica().equals(Clasifc.Virgula.get())) {
-					do {
-						validDeclarMult = isDeclararVariavelMult();
-					} while (validDeclarMult);
-
-				}
+				// Declarar Múltiplas variáveis
+				do {
+					validDeclarMult = isDeclararVariavelMult();
+				} while (validDeclarMult);
 
 				if (this.Lockahead.getClasifica().equals(Clasifc.Ponto_Virgula.get())) {
 					readToken();
@@ -162,6 +182,8 @@ public class Parser {
 			} else {
 				disparaErro(erroDeclaraVariavel);
 			}
+		}else if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
+			disparaErro(erroVirgulaDeclara);
 		}
 
 		return valid;
@@ -245,11 +267,9 @@ public class Parser {
 			if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 				readToken();
 				if (isExprRelacional()) {
-					//readToken();
 					if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 						readToken();
 						if (isComando()) {
-							//readToken();
 							valid = true;
 							temElse();
 						} else {
@@ -274,9 +294,7 @@ public class Parser {
 	public void temElse() throws IOException {
 		if (this.Lockahead.getClasifica().equals(Clasifc.ELSE.get())) {
 			readToken();
-			if (isComando()) {
-				//readToken();
-			} else {
+			if (!isComando()) {
 				disparaErro(erroIFComando);
 			}
 		}
@@ -314,7 +332,6 @@ public class Parser {
 			if (this.Lockahead.getClasifica().equals(Clasifc.Igual.get())) {
 				readToken();
 				if (isExprAritmetica()) {
-					// readToken();
 					if (this.Lockahead.getClasifica().equals(Clasifc.Ponto_Virgula.get())) {
 						readToken();
 						valid = true;
@@ -342,11 +359,9 @@ public class Parser {
 			if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 				readToken();
 				if (isExprRelacional()) {
-					// readToken();
 					if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 						readToken();
 						if (isComando()) {
-							// readToken();
 							valid = true;
 						} else {
 							disparaErro(erroWhileComando);
@@ -373,13 +388,11 @@ public class Parser {
 		if (this.Lockahead.getClasifica().equals(Clasifc.DO.get())) {
 			readToken();
 			if (isComando()) {
-				// readToken();
 				if (this.Lockahead.getClasifica().equals(Clasifc.WHILE.get())) {
 					readToken();
 					if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 						readToken();
 						if (isExprRelacional()) {
-							// readToken();
 							if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 								readToken();
 								if (this.Lockahead.getClasifica().equals(Clasifc.Ponto_Virgula.get())) {
@@ -416,11 +429,9 @@ public class Parser {
 		boolean valid = false;
 
 		if (isExprAritmetica()) {
-			// readToken();
 			if (isOPRelacional()) {
 				readToken();
 				if (isExprAritmetica()) {
-					// readToken();
 					valid = true;
 				} else {
 					disparaErro(erroRelacionalExpressão);
@@ -428,9 +439,7 @@ public class Parser {
 			} else {
 				disparaErro(erroOperadoRelacional);
 			}
-		} /*
-			 * else { disparaErro(erroRelacionalExpressão); }
-			 */
+		}
 
 		return valid;
 
@@ -441,15 +450,11 @@ public class Parser {
 		boolean valid = false;
 		boolean soma_dimi = false;
 		if (isTermo()) {
-			// readToken();
 			valid = true;
 			do {
 				soma_dimi = SomaDimin();
 			} while (soma_dimi);
-			// SomaDimin();
-		} /*
-			 * else { disparaErro(erroAritTermo); }
-			 */
+		}
 
 		return valid;
 
@@ -460,14 +465,11 @@ public class Parser {
 		boolean valid = false;
 		boolean mult_div = false;
 		if (isFator()) {
-			// readToken();
 			valid = true;
 			do {
 				mult_div = multDiv();
 			} while (mult_div);
-		} /*
-			 * else { disparaErro(erroAritFator); }
-			 */
+		}
 
 		return valid;
 
@@ -488,7 +490,6 @@ public class Parser {
 		else if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 			readToken();
 			if (isExprAritmetica()) {
-				// readToken();
 				if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 					readToken();
 					valid = true;
@@ -512,7 +513,6 @@ public class Parser {
 				|| this.Lockahead.getClasifica().equals(Clasifc.Div.get())) {
 			readToken();
 			if (isFator()) {
-				// readToken();
 				valid = true;
 			} else {
 				disparaErro(erroAritFator);
@@ -531,7 +531,6 @@ public class Parser {
 				|| this.Lockahead.getClasifica().equals(Clasifc.Menos.get())) {
 			readToken();
 			if (isTermo()) {
-				// readToken();
 				valid = true;
 			} else {
 				disparaErro(erroAritTermo);
