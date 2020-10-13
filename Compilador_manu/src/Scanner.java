@@ -26,40 +26,69 @@ public class Scanner {
 	public Token getToken() {
 		return this.token;
 	}
+	
+	public Arquivo getArquivo() {
+		return this.arq;
+	}
 
 	// *-----> Verificação Léxica
-	public void verificLexico() throws IOException {
+	public Token verificLexico() throws IOException {
+		Token token = new Token("", "");
+		/*
+		 * while (!this.Lockahead.equals("EOF")) { // Enquanto não chega no Fim de
+		 * arquivo if (!this.Lockahead.equals("\r") && !this.Lockahead.equals("\n") //
+		 * Ignorar sinal de pula linha && !this.Lockahead.equals(" ") &&
+		 * !this.Lockahead.equals("\t")) { // Ignorar espaços em branco
+		 * 
+		 * if (!isComentario()) { // Ignorar Comentários if (isID()) { // ID
+		 * isPalavraReservada(); // Palavra Reservada exibirToken(); } else if
+		 * (isInt_Float()) { // Inteiro ou Float exibirToken(); } else if
+		 * (isRelacional()) { // Operadores Relaicionais exibirToken(); } else if
+		 * (isAritimetico()) { // Operadores Aritiméticos exibirToken(); } else if
+		 * (isChar()) { // Char exibirToken(); } else if (isCaracterEspecial()) { //
+		 * Caracter Especial exibirToken(); } else { disparaErro(erroCaracterInvalido);
+		 * } }
+		 * 
+		 * } else { this.Lockahead = arq.readCaracter(); } }
+		 */
 
-		while (!this.Lockahead.equals("EOF")) { // Enquanto não chega no Fim de arquivo
-			if (!this.Lockahead.equals("\r") && !this.Lockahead.equals("\n") // Ignorar sinal de pula linha
-					&& !this.Lockahead.equals(" ") && !this.Lockahead.equals("\t")) { // Ignorar espaços em branco
+		while (this.Lockahead.equals("\r") || this.Lockahead.equals("\n") || this.Lockahead.equals(" ")
+				|| this.Lockahead.equals("\t")) {
+			this.Lockahead = arq.readCaracter();
+		}
+		
+		if (this.Lockahead.equals("EOF")) {
 
-				if (!isComentario()) { // Ignorar Comentários
-					if (isID()) { // ID
-						isPalavraReservada(); // Palavra Reservada
-						exibirToken();
-					} else if (isInt_Float()) { // Inteiro ou Float
-						exibirToken();
-					} else if (isRelacional()) { // Operadores Relaicionais
-						exibirToken();
-					} else if (isAritimetico()) { // Operadores Aritiméticos
-						exibirToken();
-					} else if (isChar()) { // Char
-						exibirToken();
-					} else if (isCaracterEspecial()) { // Caracter Especial
-						exibirToken();
-					} else {
-						disparaErro(erroCaracterInvalido);
-					}
+			if (!isComentario()) { // Ignorar Comentários
+				if (isID()) { // ID
+					isPalavraReservada(); // Palavra Reservada
+					//exibirToken();
+					token = this.token;
+				} else if (isInt_Float()) { // Inteiro ou Float
+					//exibirToken();
+					token = this.token;
+				} else if (isRelacional()) { // Operadores Relaicionais
+					//exibirToken();
+					token = this.token;
+				} else if (isAritimetico()) { // Operadores Aritiméticos
+					//exibirToken();
+					token = this.token;
+				} else if (isChar()) { // Char
+					//exibirToken();
+					token = this.token;
+				} else if (isCaracterEspecial()) { // Caracter Especial
+					//exibirToken();
+					token = this.token;
+				} else {
+					disparaErro(erroCaracterInvalido);
 				}
-
-			} else {
-				this.Lockahead = arq.readCaracter();
 			}
 		}
-
+		
 		// Fechar o arquivo
 		this.arq.fecharArquivo();
+		
+		return token;
 
 	}
 
