@@ -34,23 +34,6 @@ public class Scanner {
 	// *-----> Verificação Léxica
 	public Token verificLexico() throws IOException {
 		Token token = new Token("EOF", "");
-		/*
-		 * while (!this.Lockahead.equals("EOF")) { // Enquanto não chega no Fim de
-		 * arquivo if (!this.Lockahead.equals("\r") && !this.Lockahead.equals("\n") //
-		 * Ignorar sinal de pula linha && !this.Lockahead.equals(" ") &&
-		 * !this.Lockahead.equals("\t")) { // Ignorar espaços em branco
-		 * 
-		 * if (!isComentario()) { // Ignorar Comentários if (isID()) { // ID
-		 * isPalavraReservada(); // Palavra Reservada exibirToken(); } else if
-		 * (isInt_Float()) { // Inteiro ou Float exibirToken(); } else if
-		 * (isRelacional()) { // Operadores Relaicionais exibirToken(); } else if
-		 * (isAritimetico()) { // Operadores Aritiméticos exibirToken(); } else if
-		 * (isChar()) { // Char exibirToken(); } else if (isCaracterEspecial()) { //
-		 * Caracter Especial exibirToken(); } else { disparaErro(erroCaracterInvalido);
-		 * } }
-		 * 
-		 * } else { this.Lockahead = arq.readCaracter(); } }
-		 */
 
 		while (this.Lockahead.equals("\r") || this.Lockahead.equals("\n") || this.Lockahead.equals(" ")
 				|| this.Lockahead.equals("\t")) {

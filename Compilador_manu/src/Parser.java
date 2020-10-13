@@ -128,7 +128,6 @@ public class Parser {
 			if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
 				readToken();
 				if (this.Lockahead.getClasifica().equals(Clasifc.Virgula.get())) {
-					// readToken();
 					do {
 						validDeclarMult = isDeclararVariavelMult();
 					} while (validDeclarMult);

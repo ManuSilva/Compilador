@@ -10,8 +10,6 @@ public class Main {
         	System.out.println("Abrindo Arquivo...");
         	Arquivo o_arq = new Arquivo(args[0]);
         	
-        	//Scanner scanner = new Scanner(o_arq);
-        	//scanner.verificLexico();
         	Parser parser = new Parser(o_arq);
         	parser.verificSintatico();
 

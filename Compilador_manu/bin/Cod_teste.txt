@@ -1,7 +1,5 @@
 INT MAIN(){
 
-/*
-teste*/
 
 
 }
