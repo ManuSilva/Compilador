@@ -8,7 +8,7 @@ public class Arquivo {
 	private String path;
 	private BufferedReader br;
 	private FileReader fr;
-	private int linha;
+	private int linha ;
 	private int coluna;
 	private int linha_marc;
 	private int coluna_marc;

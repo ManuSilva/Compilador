@@ -5,6 +5,8 @@ public class Parser {
 	private Scanner scanner;
 	private Token Lockahead;
 	private Token LastToken;
+	private int linha_lida;
+	private int coluna_lida;
 
 	// *------------------Erros Parser----------------------*
 	static String erroIntMain = "O programa deve inciar com o comando 'INT MAIN()' corretamente";
@@ -18,7 +20,7 @@ public class Parser {
 	static String erroAtribExpressão = "Necessário Expressão Aritmetica correta para a Atribuição";
 	static String erroFatorExpressão = "Necessário Expressão Aritmetica correta para o Fator";
 	static String erroRelacionalExpressão = "Necessário Expressão Aritmetica correta para operação relacional";
-	static String erroFatorAbreParen = "Falta '(' para o Fator";
+	static String erroMAINAbreParen = "Falta '(' para o INT MAIN";
 	static String erroWhileAbreParen = "Falta '(' para o WHILE / DO-WHILE";
 	static String erroIFAbreParen = "Falta '(' para o comando IF / ELSE";
 	static String erroWhileComando = "Comando do WHILE / DO-WHILE incorreto";
@@ -33,15 +35,20 @@ public class Parser {
 
 	// *-----> Construtor
 	public Parser(Arquivo arq) throws IOException {
+		Token token = new Token("", "");
 		Scanner scanner = new Scanner(arq);
 		this.scanner = scanner;
+		this.LastToken = token;
 		this.Lockahead = scanner.verificLexico();
 	}
 
 	// *-----> Ler proximo Token do Scanner
 	public void readToken() throws IOException {
 		this.LastToken = this.Lockahead;
+		this.linha_lida = this.scanner.getArquivo().getlinha();
+		this.coluna_lida = this.scanner.getArquivo().getColuna();
 		this.Lockahead = this.scanner.verificLexico();
+
 	}
 
 	// *-----> Verificação Sintática
@@ -56,21 +63,23 @@ public class Parser {
 
 				readToken();
 
-				if (this.Lockahead.getClasifica().equals("(")) { // "("
+				if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) { // "("
 
 					readToken();
 
-					if (this.Lockahead.getClasifica().equals(")")) { // ")"
+					if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) { // ")"
 						readToken();
 						isBloco();
-						if(!this.Lockahead.getLexama().equals("EOF")) {
+						if (!this.Lockahead.getLexama().equals("EOF")) {
 							disparaErro(erroCodigoFim);
+						} else {
+							System.out.println("Programa compilado com sucesso!");
 						}
 					} else {
-						disparaErro(erroIntMain);
+						disparaErro(erroFechaParent);
 					}
 				} else {
-					disparaErro(erroIntMain);
+					disparaErro(erroMAINAbreParen);
 				}
 			} else {
 				disparaErro(erroIntMain);
@@ -89,9 +98,8 @@ public class Parser {
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Chaves.get())) { // '{'
 			// Um ou mais Declaração ou Comando
-
+			readToken();
 			do {
-				readToken();
 				validDeclaracao = isDeclararVariavel();
 				validComando = isComando();
 			} while (validDeclaracao || validComando);
@@ -120,7 +128,7 @@ public class Parser {
 			if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
 				readToken();
 				if (this.Lockahead.getClasifica().equals(Clasifc.Virgula.get())) {
-					readToken();
+					// readToken();
 					do {
 						validDeclarMult = isDeclararVariavelMult();
 					} while (validDeclarMult);
@@ -234,14 +242,15 @@ public class Parser {
 		boolean valid = false;
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.IF.get())) {
+			readToken();
 			if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 				readToken();
 				if (isExprRelacional()) {
-					readToken();
+					//readToken();
 					if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 						readToken();
 						if (isComando()) {
-							readToken();
+							//readToken();
 							valid = true;
 							temElse();
 						} else {
@@ -265,8 +274,9 @@ public class Parser {
 	// *-----> Validar o ELSE
 	public void temElse() throws IOException {
 		if (this.Lockahead.getClasifica().equals(Clasifc.ELSE.get())) {
+			readToken();
 			if (isComando()) {
-				readToken();
+				//readToken();
 			} else {
 				disparaErro(erroIFComando);
 			}
@@ -305,7 +315,7 @@ public class Parser {
 			if (this.Lockahead.getClasifica().equals(Clasifc.Igual.get())) {
 				readToken();
 				if (isExprAritmetica()) {
-					readToken();
+					// readToken();
 					if (this.Lockahead.getClasifica().equals(Clasifc.Ponto_Virgula.get())) {
 						readToken();
 						valid = true;
@@ -333,11 +343,11 @@ public class Parser {
 			if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 				readToken();
 				if (isExprRelacional()) {
-					readToken();
+					// readToken();
 					if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 						readToken();
 						if (isComando()) {
-							readToken();
+							// readToken();
 							valid = true;
 						} else {
 							disparaErro(erroWhileComando);
@@ -364,16 +374,22 @@ public class Parser {
 		if (this.Lockahead.getClasifica().equals(Clasifc.DO.get())) {
 			readToken();
 			if (isComando()) {
-				readToken();
+				// readToken();
 				if (this.Lockahead.getClasifica().equals(Clasifc.WHILE.get())) {
 					readToken();
 					if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 						readToken();
 						if (isExprRelacional()) {
-							readToken();
+							// readToken();
 							if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 								readToken();
-								valid = true;
+								if (this.Lockahead.getClasifica().equals(Clasifc.Ponto_Virgula.get())) {
+									readToken();
+									valid = true;
+								} else {
+									disparaErro(erroPontoVirgula);
+								}
+
 							} else {
 								disparaErro(erroFechaParent);
 							}
@@ -401,11 +417,11 @@ public class Parser {
 		boolean valid = false;
 
 		if (isExprAritmetica()) {
-			readToken();
+			// readToken();
 			if (isOPRelacional()) {
 				readToken();
 				if (isExprAritmetica()) {
-					readToken();
+					// readToken();
 					valid = true;
 				} else {
 					disparaErro(erroRelacionalExpressão);
@@ -413,9 +429,9 @@ public class Parser {
 			} else {
 				disparaErro(erroOperadoRelacional);
 			}
-		} else {
-			disparaErro(erroRelacionalExpressão);
-		}
+		} /*
+			 * else { disparaErro(erroRelacionalExpressão); }
+			 */
 
 		return valid;
 
@@ -426,14 +442,15 @@ public class Parser {
 		boolean valid = false;
 		boolean soma_dimi = false;
 		if (isTermo()) {
-			readToken();
+			// readToken();
 			valid = true;
 			do {
 				soma_dimi = SomaDimin();
 			} while (soma_dimi);
-		} else {
-			disparaErro(erroAritTermo);
-		}
+			// SomaDimin();
+		} /*
+			 * else { disparaErro(erroAritTermo); }
+			 */
 
 		return valid;
 
@@ -444,14 +461,14 @@ public class Parser {
 		boolean valid = false;
 		boolean mult_div = false;
 		if (isFator()) {
-			readToken();
+			// readToken();
 			valid = true;
 			do {
 				mult_div = multDiv();
 			} while (mult_div);
-		} else {
-			disparaErro(erroAritFator);
-		}
+		} /*
+			 * else { disparaErro(erroAritFator); }
+			 */
 
 		return valid;
 
@@ -462,16 +479,17 @@ public class Parser {
 		boolean valid = false;
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())
-				|| this.Lockahead.getClasifica().equals(Clasifc.INT.get())
-				|| this.Lockahead.getClasifica().equals(Clasifc.FLOAT.get())
-				|| this.Lockahead.getClasifica().equals(Clasifc.CHAR.get())) {
+				|| this.Lockahead.getClasifica().equals(Clasifc.Inteiro.get())
+				|| this.Lockahead.getClasifica().equals(Clasifc.Float.get())
+				|| this.Lockahead.getClasifica().equals(Clasifc.Char.get())) {
+			readToken();
 			valid = true;
 		}
 
 		else if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 			readToken();
 			if (isExprAritmetica()) {
-				readToken();
+				// readToken();
 				if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 					readToken();
 					valid = true;
@@ -480,27 +498,6 @@ public class Parser {
 				}
 			} else {
 				disparaErro(erroFatorExpressão);
-			}
-		} else {
-			disparaErro(erroFatorAbreParen );
-		}
-
-		return valid;
-
-	}
-
-	// *-----> Soma e Subtração
-	public boolean SomaDimin() throws IOException {
-		boolean valid = false;
-
-		if (this.Lockahead.getClasifica().equals(Clasifc.Mult.get())
-				|| this.Lockahead.getClasifica().equals(Clasifc.Div.get())) {
-			readToken();
-			if (isTermo()) {
-				readToken();
-				valid = true;
-			} else {
-				disparaErro(erroAritFator);
 			}
 		}
 
@@ -512,11 +509,30 @@ public class Parser {
 	public boolean multDiv() throws IOException {
 		boolean valid = false;
 
+		if (this.Lockahead.getClasifica().equals(Clasifc.Mult.get())
+				|| this.Lockahead.getClasifica().equals(Clasifc.Div.get())) {
+			readToken();
+			if (isFator()) {
+				// readToken();
+				valid = true;
+			} else {
+				disparaErro(erroAritFator);
+			}
+		}
+
+		return valid;
+
+	}
+
+	// *-----> Soma e Subtração
+	public boolean SomaDimin() throws IOException {
+		boolean valid = false;
+
 		if (this.Lockahead.getClasifica().equals(Clasifc.Soma.get())
 				|| this.Lockahead.getClasifica().equals(Clasifc.Menos.get())) {
 			readToken();
-			if (isFator()) {
-				readToken();
+			if (isTermo()) {
+				// readToken();
 				valid = true;
 			} else {
 				disparaErro(erroAritTermo);
@@ -547,8 +563,8 @@ public class Parser {
 	// *-----> Dispara Error
 	public void disparaErro(String erro) {
 
-		int Linha = this.scanner.getArquivo().getlinha();
-		int Coluna = this.scanner.getArquivo().getColuna();
+		int Linha = this.linha_lida;
+		int Coluna = this.coluna_lida;
 		String lexama = this.LastToken.getLexama();
 		System.out.println("ERRO na Linha: " + Linha + ", " + "Coluna: " + Coluna + ", " + "Ultimo token lido: "
 				+ lexama + " Mensagem: " + erro);

@@ -26,14 +26,14 @@ public class Scanner {
 	public Token getToken() {
 		return this.token;
 	}
-	
+
 	public Arquivo getArquivo() {
 		return this.arq;
 	}
 
 	// *-----> Verificação Léxica
 	public Token verificLexico() throws IOException {
-		Token token = new Token("", "");
+		Token token = new Token("EOF", "");
 		/*
 		 * while (!this.Lockahead.equals("EOF")) { // Enquanto não chega no Fim de
 		 * arquivo if (!this.Lockahead.equals("\r") && !this.Lockahead.equals("\n") //
@@ -56,38 +56,38 @@ public class Scanner {
 				|| this.Lockahead.equals("\t")) {
 			this.Lockahead = arq.readCaracter();
 		}
-		
-		if (this.Lockahead.equals("EOF")) {
 
-			if (!isComentario()) { // Ignorar Comentários
+		if (!this.Lockahead.equals("EOF")) {
+			isComentario(); // Ignorar Comentários
+			//if (!isComentario()) { // Ignorar Comentários
 				if (isID()) { // ID
 					isPalavraReservada(); // Palavra Reservada
-					//exibirToken();
+					// exibirToken();
 					token = this.token;
 				} else if (isInt_Float()) { // Inteiro ou Float
-					//exibirToken();
+					// exibirToken();
 					token = this.token;
 				} else if (isRelacional()) { // Operadores Relaicionais
-					//exibirToken();
+					// exibirToken();
 					token = this.token;
 				} else if (isAritimetico()) { // Operadores Aritiméticos
-					//exibirToken();
+					// exibirToken();
 					token = this.token;
 				} else if (isChar()) { // Char
-					//exibirToken();
+					// exibirToken();
 					token = this.token;
 				} else if (isCaracterEspecial()) { // Caracter Especial
-					//exibirToken();
+					// exibirToken();
 					token = this.token;
 				} else {
 					disparaErro(erroCaracterInvalido);
 				}
-			}
+			//}
+		} else {
+			// Fechar o arquivo
+			this.arq.fecharArquivo();
 		}
-		
-		// Fechar o arquivo
-		this.arq.fecharArquivo();
-		
+
 		return token;
 
 	}
@@ -251,7 +251,7 @@ public class Scanner {
 	}
 
 	// *-----> Comentário
-	public boolean isComentario() throws IOException {
+	public void isComentario() throws IOException {
 		boolean valid = false;
 		String la = this.Lockahead;
 
@@ -303,10 +303,13 @@ public class Scanner {
 		if (!valid) {
 			this.arq.reset(); // Voltar ponto no arquivo caso não for comentário
 		} else {
+			while (la.equals("\r") || la.equals("\n") || la.equals(" ") || la.equals("\t")) {
+				la = arq.readCaracter();
+			}
 			this.Lockahead = la;
 		}
 
-		return valid;
+		//return valid;
 	}
 
 	// *-----> Operadores Relacionais
