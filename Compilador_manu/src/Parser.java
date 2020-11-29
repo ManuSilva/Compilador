@@ -43,7 +43,7 @@ public class Parser {
 	static String erroTipoChar = "Valor do tipo CHAR apenas permitidos operação com outro tipo CHAR";
 	static String erroIntIgualFloat = "Variável INT não pode receber valor do tipo FLOAT";
 	static String erroVariavélJaDeclarada = "Variável já delcarada nesse escopo";
-	static String erroVariavelNaoDeclarada = "Variável naõ foi declarada";
+	static String erroVariavelNaoDeclarada = "Variável não foi declarada";
 
 	// *-----------------------------------------------------*
 	// *-----> Construtor
@@ -129,7 +129,7 @@ public class Parser {
 				else if (this.Lockahead.getClasifica().equals(Clasifc.INT.get())
 						|| this.Lockahead.getClasifica().equals(Clasifc.FLOAT.get())
 						|| this.Lockahead.getClasifica().equals(Clasifc.CHAR.get())) {
-					this.LastTipo = this.Lockahead.getClasifica();
+					this.LastTipo = setarTipo(this.Lockahead.getClasifica());
 					validDeclaracao = isDeclararVariavel();
 				}
 
@@ -512,9 +512,13 @@ public class Parser {
 				if (!tipo2.equals("")) {
 					tipo1 = comparaTipo(tipo1, op, tipo2);
 					soma_dimi = true;
+				} else {
+					soma_dimi = false;
 				}
 			} while (soma_dimi);
 		}
+
+		tipo_result = comparaTipo(tipo1, op, tipo2);
 
 		return tipo_result;
 
@@ -539,6 +543,8 @@ public class Parser {
 				if (!tipo2.equals("")) {
 					tipo1 = comparaTipo(tipo1, op, tipo2);
 					mult_div = true;
+				} else {
+					mult_div = false;
 				}
 
 			} while (mult_div);
@@ -568,6 +574,7 @@ public class Parser {
 				|| this.Lockahead.getClasifica().equals(Clasifc.Char.get())) {
 
 			tipo = this.Lockahead.getClasifica();
+			readToken();
 		}
 
 		else if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
@@ -648,7 +655,7 @@ public class Parser {
 		Simbolo sb = new Simbolo("", this.LastTipo, this.bloco);
 
 		// Validar se a variável já foi declarada
-		tipo = JaDeclarado(this.LastTipo, this.bloco);
+		tipo = JaDeclarado(this.Lockahead.getLexama(), this.bloco);
 		if (tipo.equals("")) {
 			sb.setLexama(this.Lockahead.getLexama()); // Guardar Valor na tabela de símbolos para o semantico
 			this.tabela_simbolo.push(sb);
@@ -680,12 +687,15 @@ public class Parser {
 	// Validar se variavéis são compativeis e faz conversão de tipo
 	public String comparaTipo(String tipo1, String op, String tipo2) {
 		String tipo_result = "";
+		
+		if (!op.equals("")) {
+			if ((tipo1.equals(Clasifc.Char.get()) && !tipo2.equals(Clasifc.Char.get()))
+					|| (!tipo1.equals(Clasifc.Char.get()) && tipo2.equals(Clasifc.Char.get()))) {
 
-		if ((tipo1.equals(Clasifc.Char.get()) && !tipo2.equals(Clasifc.Char.get()))
-				|| (!tipo1.equals(Clasifc.Char.get()) && tipo2.equals(Clasifc.Char.get()))) {
+				// ERRO SEMANTICO CHAR
+				disparaErro(erroTipoChar);
+			}
 
-			// ERRO SEMANTICO CHAR
-			disparaErro(erroTipoChar);
 		}
 
 		if (tipo1.equals(Clasifc.Inteiro.get()) && op.equals(Clasifc.Igual.get())
@@ -744,7 +754,7 @@ public class Parser {
 					exit = true;
 				}
 
-			} while (exit);
+			} while (!exit);
 		}
 
 		// Fazer a busca em toda tabela de simbolo
@@ -762,7 +772,7 @@ public class Parser {
 					exit = true;
 				}
 
-			} while (exit);
+			} while (!exit);
 		}
 
 		// Empilhar a pilha novamente
@@ -778,10 +788,25 @@ public class Parser {
 				exit = true;
 			}
 
-		} while (exit);
+		} while (!exit);
 
 		return tipo;
 
+	}
+
+	// *Tipo
+	public String setarTipo(String palavra_reservada) {
+		String tipo = "";
+
+		if (this.Lockahead.getClasifica().equals(Clasifc.INT.get())) {
+			tipo = Clasifc.Inteiro.get();
+		} else if (this.Lockahead.getClasifica().equals(Clasifc.FLOAT.get())) {
+			tipo = Clasifc.Float.get();
+		} else if (this.Lockahead.getClasifica().equals(Clasifc.CHAR.get())) {
+			tipo = Clasifc.Char.get();
+		}
+
+		return tipo;
 	}
 
 	// *-----> Dispara Error
