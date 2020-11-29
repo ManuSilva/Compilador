@@ -5,15 +5,15 @@ int main() {
 
     k = x;
     w = 5/x+y*8+5* 7;
-/** ; /** /*        teste &%
+    /** /** /*
+       teste &%
     ***/
 
 
 
     do {
 
-        w = w + 1;
-
+w = w ; + 1; 
     }while  (y<10);
 
 

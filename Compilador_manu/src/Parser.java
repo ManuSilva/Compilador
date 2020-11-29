@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.util.Stack;
 
 public class Parser {
 
@@ -7,6 +8,9 @@ public class Parser {
 	private Token LastToken;
 	private int linha_lida;
 	private int coluna_lida;
+	private int bloco = 0;
+	private Stack<Simbolo> tabela_simbolo;
+	private String LastTipo;
 
 	// *------------------Erros Parser----------------------*
 	static String erroIntMain = "O programa deve inciar com o comando 'INT MAIN()' corretamente";
@@ -33,16 +37,24 @@ public class Parser {
 	static String erroCodigoFim = "Não é permitido código após o 'INT MAIN()'";
 	static String erroVirgulaDeclara = "Necessário de vírgula entre as variáveis na declaração";
 	static String erroVariavelInvalida = "Variável posicionada de forma inválida";
-	
-	// *-----------------------------------------------------*
 
+	// *------------------Erros Semêntico----------------------*
+
+	static String erroTipoChar = "Valor do tipo CHAR apenas permitidos operação com outro tipo CHAR";
+	static String erroIntIgualFloat = "Variável INT não pode receber valor do tipo FLOAT";
+	static String erroVariavélJaDeclarada = "Variável já delcarada nesse escopo";
+	static String erroVariavelNaoDeclarada = "Variável naõ foi declarada";
+
+	// *-----------------------------------------------------*
 	// *-----> Construtor
 	public Parser(Arquivo arq) throws IOException {
 		Token token = new Token("", "");
+		Stack<Simbolo> tabela = new Stack<Simbolo>();
 		Scanner scanner = new Scanner(arq);
 		this.scanner = scanner;
 		this.LastToken = token;
 		this.Lockahead = scanner.verificLexico();
+		this.tabela_simbolo = tabela;
 	}
 
 	// *-----> Ler proximo Token do Scanner
@@ -50,7 +62,7 @@ public class Parser {
 		this.LastToken = this.Lockahead;
 		this.linha_lida = this.scanner.getArquivo().getlinha();
 		this.coluna_lida = this.scanner.getArquivo().getColuna();
-	 this.Lockahead = this.scanner.verificLexico();
+		this.Lockahead = this.scanner.verificLexico();
 
 	}
 
@@ -101,6 +113,7 @@ public class Parser {
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Chaves.get())) { // '{'
 			// Um ou mais Declaração ou Comando
+			this.bloco++; // Contagem de bloco
 			readToken();
 			do {
 				validComando = false;
@@ -109,26 +122,28 @@ public class Parser {
 						|| this.Lockahead.getClasifica().equals(Clasifc.Abre_Chaves.get())
 						|| this.Lockahead.getClasifica().equals(Clasifc.WHILE.get())
 						|| this.Lockahead.getClasifica().equals(Clasifc.DO.get())
-						|| this.Lockahead.getClasifica().equals(Clasifc.IF.get())){
+						|| this.Lockahead.getClasifica().equals(Clasifc.IF.get())) {
 					validComando = isComando();
 				}
-				
+
 				else if (this.Lockahead.getClasifica().equals(Clasifc.INT.get())
 						|| this.Lockahead.getClasifica().equals(Clasifc.FLOAT.get())
 						|| this.Lockahead.getClasifica().equals(Clasifc.CHAR.get())) {
+					this.LastTipo = this.Lockahead.getClasifica();
 					validDeclaracao = isDeclararVariavel();
 				}
-				
-				else if(!this.Lockahead.getClasifica().equals(Clasifc.Fecha_Chaves.get())) {
+
+				else if (!this.Lockahead.getClasifica().equals(Clasifc.Fecha_Chaves.get())) {
 					disparaErro(erroVariavelInvalida);
 				}
 
 			} while (!this.Lockahead.getClasifica().equals(Clasifc.Fecha_Chaves.get()));
 
-
 			if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Chaves.get())) { // '}'
 				valid = true;
 				readToken();
+				desempilhaBloco(this.bloco);
+				this.bloco--;
 			} else {
 				disparaErro(erroBlocoFecha);
 			}
@@ -148,6 +163,7 @@ public class Parser {
 		if (isTipo()) {
 			readToken();
 			if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
+				MontaTabelaSimbolo();
 				readToken();
 				// Declarar Múltiplas variáveis
 				do {
@@ -165,7 +181,7 @@ public class Parser {
 				disparaErro(erroDeclaraVariavel);
 			}
 		}
-
+		this.LastTipo = "";
 		return valid;
 
 	}
@@ -177,12 +193,13 @@ public class Parser {
 		if (this.Lockahead.getClasifica().equals(Clasifc.Virgula.get())) {
 			readToken();
 			if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
+				MontaTabelaSimbolo();
 				readToken();
 				valid = true;
 			} else {
 				disparaErro(erroDeclaraVariavel);
 			}
-		}else if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
+		} else if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
 			disparaErro(erroVirgulaDeclara);
 		}
 
@@ -326,24 +343,41 @@ public class Parser {
 	// *-----> Atribuição
 	public boolean isAtribuicao() throws IOException {
 		boolean valid = false;
+		String tipo1 = "";
+		String tipo2 = "";
+		String op = "";
+		String tipo_result = "";
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
-			readToken();
-			if (this.Lockahead.getClasifica().equals(Clasifc.Igual.get())) {
+			tipo1 = JaDeclarado(this.Lockahead.getLexama(), 0);
+			if (!tipo1.equals("")) {
 				readToken();
-				if (isExprAritmetica()) {
-					if (this.Lockahead.getClasifica().equals(Clasifc.Ponto_Virgula.get())) {
-						readToken();
-						valid = true;
+				if (this.Lockahead.getClasifica().equals(Clasifc.Igual.get())) {
+					op = Clasifc.Igual.get();
+					readToken();
+					tipo2 = isExprAritmetica();
+					if (!tipo2.equals("")) {
+						if (this.Lockahead.getClasifica().equals(Clasifc.Ponto_Virgula.get())) {
+							readToken();
+							valid = true;
+						} else {
+							disparaErro(erroPontoVirgula);
+						}
 					} else {
-						disparaErro(erroPontoVirgula);
+						disparaErro(erroAtribExpressão);
 					}
 				} else {
-					disparaErro(erroAtribExpressão);
+					disparaErro(erroAtribIgual);
 				}
 			} else {
-				disparaErro(erroAtribIgual);
+				disparaErro(erroVariavelNaoDeclarada);
 			}
+		}
+
+		tipo_result = comparaTipo(tipo1, op, tipo2);
+
+		if (tipo_result.equals("")) {
+			valid = false;
 		}
 
 		return valid;
@@ -427,11 +461,18 @@ public class Parser {
 	// *-----> Expressão Relacional
 	public boolean isExprRelacional() throws IOException {
 		boolean valid = false;
+		String tipo1 = "";
+		String tipo2 = "";
+		String op = "";
+		String tipo_result = "";
 
-		if (isExprAritmetica()) {
-			if (isOPRelacional()) {
+		tipo1 = isExprAritmetica();
+		if (!tipo1.equals("")) {
+			op = isOPRelacional();
+			if (!op.equals("")) {
 				readToken();
-				if (isExprAritmetica()) {
+				tipo2 = isExprAritmetica();
+				if (!tipo2.equals("")) {
 					valid = true;
 				} else {
 					disparaErro(erroRelacionalExpressão);
@@ -441,58 +482,100 @@ public class Parser {
 			}
 		}
 
+		tipo_result = comparaTipo(tipo1, op, tipo2);
+
+		if (tipo_result.equals("")) {
+			valid = false;
+		}
+
 		return valid;
 
 	}
 
 	// *-----> Expressão Aritmetica
-	public boolean isExprAritmetica() throws IOException {
-		boolean valid = false;
+	public String isExprAritmetica() throws IOException {
+		String tipo1 = "";
+		String tipo2 = "";
+		String op = "";
+		String tipo_result = "";
+		String[] result;
 		boolean soma_dimi = false;
-		if (isTermo()) {
-			valid = true;
+
+		tipo1 = isTermo();
+		if (!tipo1.equals("")) {
+			// valid = true;
 			do {
-				soma_dimi = SomaDimin();
+				result = SomaDimin();
+				tipo2 = result[0];
+				op = result[1];
+
+				if (!tipo2.equals("")) {
+					tipo1 = comparaTipo(tipo1, op, tipo2);
+					soma_dimi = true;
+				}
 			} while (soma_dimi);
 		}
 
-		return valid;
+		return tipo_result;
 
 	}
 
 	// *-----> Termo
-	public boolean isTermo() throws IOException {
-		boolean valid = false;
+	public String isTermo() throws IOException {
+		String tipo1 = "";
+		String tipo2 = "";
+		String op = "";
+		String tipo_result = "";
+		String[] result;
 		boolean mult_div = false;
-		if (isFator()) {
-			valid = true;
+
+		tipo1 = isFator();
+		if (!tipo1.equals("")) {
 			do {
-				mult_div = multDiv();
+				result = multDiv();
+				tipo2 = result[0];
+				op = result[1];
+
+				if (!tipo2.equals("")) {
+					tipo1 = comparaTipo(tipo1, op, tipo2);
+					mult_div = true;
+				}
+
 			} while (mult_div);
 		}
 
-		return valid;
+		tipo_result = comparaTipo(tipo1, op, tipo2);
+
+		return tipo_result;
 
 	}
 
 	// *-----> Fator
-	public boolean isFator() throws IOException {
-		boolean valid = false;
+	public String isFator() throws IOException {
+		String tipo = "";
 
-		if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())
-				|| this.Lockahead.getClasifica().equals(Clasifc.Inteiro.get())
+		if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
+			tipo = JaDeclarado(this.Lockahead.getLexama(), 0);
+			if (tipo.equals("")) {
+				disparaErro(erroVariavelNaoDeclarada);
+			} else {
+				readToken();
+			}
+		}
+
+		else if (this.Lockahead.getClasifica().equals(Clasifc.Inteiro.get())
 				|| this.Lockahead.getClasifica().equals(Clasifc.Float.get())
 				|| this.Lockahead.getClasifica().equals(Clasifc.Char.get())) {
-			readToken();
-			valid = true;
+
+			tipo = this.Lockahead.getClasifica();
 		}
 
 		else if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 			readToken();
-			if (isExprAritmetica()) {
+			tipo = isExprAritmetica();
+			if (!tipo.equals("")) {
 				if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 					readToken();
-					valid = true;
 				} else {
 					disparaErro(erroFechaParent);
 				}
@@ -501,49 +584,51 @@ public class Parser {
 			}
 		}
 
-		return valid;
+		return tipo;
 
 	}
 
 	// *-----> Multiplicação e Divisão
-	public boolean multDiv() throws IOException {
-		boolean valid = false;
+	public String[] multDiv() throws IOException {
+		String tipo = "";
+		String op = "";
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.Mult.get())
 				|| this.Lockahead.getClasifica().equals(Clasifc.Div.get())) {
+			op = this.Lockahead.getClasifica();
 			readToken();
-			if (isFator()) {
-				valid = true;
-			} else {
+			tipo = isFator();
+			if (tipo.equals("")) {
 				disparaErro(erroAritFator);
 			}
 		}
 
-		return valid;
+		return new String[] { tipo, op };
 
 	}
 
 	// *-----> Soma e Subtração
-	public boolean SomaDimin() throws IOException {
-		boolean valid = false;
+	public String[] SomaDimin() throws IOException {
+		String tipo = "";
+		String op = "";
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.Soma.get())
 				|| this.Lockahead.getClasifica().equals(Clasifc.Menos.get())) {
+			op = this.Lockahead.getClasifica();
 			readToken();
-			if (isTermo()) {
-				valid = true;
-			} else {
+			tipo = isTermo();
+			if (tipo.equals("")) {
 				disparaErro(erroAritTermo);
 			}
 		}
 
-		return valid;
+		return new String[] { tipo, op };
 
 	}
 
 	// *-----> Operação Relacional
-	public boolean isOPRelacional() throws IOException {
-		boolean valid = false;
+	public String isOPRelacional() throws IOException {
+		String op = "";
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.Menor_Que.get())
 				|| this.Lockahead.getClasifica().equals(Clasifc.Maior_Que.get())
@@ -551,10 +636,151 @@ public class Parser {
 				|| this.Lockahead.getClasifica().equals(Clasifc.Igual_Maior_Que.get())
 				|| this.Lockahead.getClasifica().equals(Clasifc.Igual_Igual.get())
 				|| this.Lockahead.getClasifica().equals(Clasifc.Igual_Diferente.get())) {
-			valid = true;
+			op = this.Lockahead.getClasifica();
 		}
 
-		return valid;
+		return op;
+
+	}
+
+	public void MontaTabelaSimbolo() {
+		String tipo = "";
+		Simbolo sb = new Simbolo("", this.LastTipo, this.bloco);
+
+		// Validar se a variável já foi declarada
+		tipo = JaDeclarado(this.LastTipo, this.bloco);
+		if (tipo.equals("")) {
+			sb.setLexama(this.Lockahead.getLexama()); // Guardar Valor na tabela de símbolos para o semantico
+			this.tabela_simbolo.push(sb);
+		} else {
+			// Erro Variável já declarada
+			disparaErro(erroVariavélJaDeclarada);
+		}
+
+	}
+
+	// *-----> desempilha variaveis da tabela de simbolos quando sai do bloco
+	public void desempilhaBloco(int Bloco) {
+		boolean notBloco = false;
+		Simbolo sb = new Simbolo("", "", 0);
+		do {
+			if (!this.tabela_simbolo.isEmpty()) {
+				sb = this.tabela_simbolo.pop();
+				if (sb.getBloco() != bloco) {
+					this.tabela_simbolo.push(sb);
+					notBloco = true;
+				}
+			} else {
+				notBloco = true;
+			}
+
+		} while (!notBloco);
+	}
+
+	// Validar se variavéis são compativeis e faz conversão de tipo
+	public String comparaTipo(String tipo1, String op, String tipo2) {
+		String tipo_result = "";
+
+		if ((tipo1.equals(Clasifc.Char.get()) && !tipo2.equals(Clasifc.Char.get()))
+				|| (!tipo1.equals(Clasifc.Char.get()) && tipo2.equals(Clasifc.Char.get()))) {
+
+			// ERRO SEMANTICO CHAR
+			disparaErro(erroTipoChar);
+		}
+
+		if (tipo1.equals(Clasifc.Inteiro.get()) && op.equals(Clasifc.Igual.get())
+				&& tipo2.equals(Clasifc.Float.get())) {
+			// ERRO SEMANTICO INT NÃO PODE RECEBER FLOAT
+			disparaErro(erroIntIgualFloat);
+		}
+		// A partir daqui a compatibilidade está correta
+		// Basta fazer a Conversão de tipo
+
+		if (!(tipo1.equals(Clasifc.Char.get()) || tipo2.equals(Clasifc.Char.get()))) {
+
+			if (op.equals(Clasifc.Div.get())) {
+				tipo_result = Clasifc.Float.get();
+			}
+
+			else if (op.equals(Clasifc.Mult.get()) || op.equals(Clasifc.Soma.get()) || op.equals(Clasifc.Menos.get())) {
+				if (tipo1.equals(Clasifc.Float.get()) || tipo2.equals(Clasifc.Float.get())) {
+					tipo_result = Clasifc.Float.get();
+				} else {
+					tipo_result = Clasifc.Inteiro.get();
+				}
+
+			} else {
+				tipo_result = tipo1;
+			}
+		} else {
+			tipo_result = Clasifc.Char.get();
+
+		}
+
+		return tipo_result;
+
+	}
+
+	// Valida se a variável foi declarada
+	public String JaDeclarado(String lexama, int bloco) {
+		String tipo = "";
+		boolean exit = false;
+		Simbolo sb = new Simbolo("", "", 0);
+		Stack<Simbolo> tabela_aux = new Stack<Simbolo>();
+
+		// Fazer busca considerado o bloco para pesquisar se a variavel já existe no
+		// mesmo bloco
+		if (bloco != 0) {
+			// Desempilhar a pilha ate encontrar a variavel declarada
+			do {
+				if (!this.tabela_simbolo.isEmpty()) {
+					sb = this.tabela_simbolo.pop();
+					tabela_aux.push(sb);
+					if (sb.getLexama().equals(lexama) && sb.getBloco() == bloco) {
+						exit = true;
+						tipo = sb.getTipo();
+					}
+				} else {
+					exit = true;
+				}
+
+			} while (exit);
+		}
+
+		// Fazer a busca em toda tabela de simbolo
+		else {
+			// Desempilhar a pilha ate encontrar a variavel declarada
+			do {
+				if (!this.tabela_simbolo.isEmpty()) {
+					sb = this.tabela_simbolo.pop();
+					tabela_aux.push(sb);
+					if (sb.getLexama().equals(lexama)) {
+						exit = true;
+						tipo = sb.getTipo();
+					}
+				} else {
+					exit = true;
+				}
+
+			} while (exit);
+		}
+
+		// Empilhar a pilha novamente
+		exit = false;
+
+		do {
+			if (!tabela_aux.isEmpty()) {
+
+				sb = tabela_aux.pop();
+				this.tabela_simbolo.push(sb);
+
+			} else {
+				exit = true;
+			}
+
+		} while (exit);
+
+		return tipo;
 
 	}
 
