@@ -60,10 +60,11 @@ public class Arquivo {
 		if (carac_int == -1) { // Fim de arquivo
 			Carc_String = "EOF";
 		} else if (caracter == '\r') {                  //Fim de linha
-			this.linha++;
+			//this.linha++;
 			this.coluna = 0;
 			Carc_String = Character.toString(caracter);
 		} else if (caracter == '\n'){                   //Pula linha
+			this.linha++;
 			this.coluna = 0;
 			Carc_String = Character.toString(caracter);
 		} else if (caracter == '\t'){                   // Tab
