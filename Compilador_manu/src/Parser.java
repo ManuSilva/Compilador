@@ -9,8 +9,11 @@ public class Parser {
 	private int linha_lida;
 	private int coluna_lida;
 	private int bloco = 0;
-	private Stack<Simbolo> tabela_simbolo;
+	private TabSimbolo tabela_simbolo;
 	private String LastTipo;
+	private int contTemp = -1;
+	private int contLabel = -1;
+	private String LastLabel;
 
 	// *------------------Erros Parser----------------------*
 	static String erroIntMain = "O programa deve inciar com o comando 'INT MAIN()' corretamente";
@@ -43,18 +46,18 @@ public class Parser {
 	static String erroTipoChar = "Valor do tipo CHAR apenas permitidos operação com outro tipo CHAR";
 	static String erroIntIgualFloat = "Variável INT não pode receber valor do tipo FLOAT";
 	static String erroVariavélJaDeclarada = "Variável já delcarada nesse escopo";
-	static String erroVariavelNaoDeclarada = "Variável não foi declarada";
+	//static String erroVariavelNaoDeclarada = "Variável não foi declarada";
 
 	// *-----------------------------------------------------*
 	// *-----> Construtor
 	public Parser(Arquivo arq) throws IOException {
 		Token token = new Token("", "");
-		Stack<Simbolo> tabela = new Stack<Simbolo>();
+		TabSimbolo tab = new TabSimbolo();
 		Scanner scanner = new Scanner(arq);
 		this.scanner = scanner;
 		this.LastToken = token;
 		this.Lockahead = scanner.verificLexico();
-		this.tabela_simbolo = tabela;
+		this.tabela_simbolo = tab;
 	}
 
 	// *-----> Ler proximo Token do Scanner
@@ -64,6 +67,19 @@ public class Parser {
 		this.coluna_lida = this.scanner.getArquivo().getColuna();
 		this.Lockahead = this.scanner.verificLexico();
 
+	}
+
+	// *------>Criar variável temporária (GCI)
+	public String createTemp() {
+		this.contTemp++;
+		return "t" + this.contTemp;
+	}
+
+	// *------>Criar Label (GCI)
+	public String createLabel() {
+		this.contLabel++;
+		return "L" + this.contLabel;
+		
 	}
 
 	// *-----> Verificação Sintática
@@ -142,7 +158,7 @@ public class Parser {
 			if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Chaves.get())) { // '}'
 				valid = true;
 				readToken();
-				desempilhaBloco(this.bloco);
+				this.tabela_simbolo.desempilhaBloco(this.bloco);
 				this.bloco--;
 			} else {
 				disparaErro(erroBlocoFecha);
@@ -163,7 +179,7 @@ public class Parser {
 		if (isTipo()) {
 			readToken();
 			if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
-				MontaTabelaSimbolo();
+				this.tabela_simbolo.MontaTabelaSimbolo(this.LastTipo, this.bloco, this.Lockahead);
 				readToken();
 				// Declarar Múltiplas variáveis
 				do {
@@ -193,7 +209,7 @@ public class Parser {
 		if (this.Lockahead.getClasifica().equals(Clasifc.Virgula.get())) {
 			readToken();
 			if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
-				MontaTabelaSimbolo();
+				this.tabela_simbolo.MontaTabelaSimbolo(this.LastTipo, this.bloco, this.Lockahead);
 				readToken();
 				valid = true;
 			} else {
@@ -278,17 +294,25 @@ public class Parser {
 	// *-----> Condição
 	public boolean isCondicao() throws IOException {
 		boolean valid = false;
+		Token token1 = new Token("", "");
+		String label = "";
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.IF.get())) {
 			readToken();
 			if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 				readToken();
-				if (isExprRelacional()) {
+				token1 = isExprRelacional();
+				if (!token1.getLexama().equals("")) {
 					if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 						readToken();
+						label = createLabel();
+						System.out.println("IF " + token1.getLexama() + " == 0 GOTO " + label);
+						this.LastLabel = label;
 						if (isComando()) {
 							valid = true;
-							temElse();
+							if(!temElse()) {
+								System.out.println(label + ":");
+							}
 						} else {
 							disparaErro(erroIFComando);
 						}
@@ -308,13 +332,23 @@ public class Parser {
 	}
 
 	// *-----> Validar o ELSE
-	public void temElse() throws IOException {
+	public boolean temElse() throws IOException {
+		String label = "";
+		boolean tem = false;
 		if (this.Lockahead.getClasifica().equals(Clasifc.ELSE.get())) {
+			tem = true;
+			label = createLabel();
+			System.out.println("GOTO " + label);
+			System.out.println(this.LastLabel + ":");
+			this.LastLabel = label;
 			readToken();
 			if (!isComando()) {
 				disparaErro(erroIFComando);
+			}else {				
+				System.out.println(label + ":");
 			}
 		}
+		return tem;
 
 	}
 
@@ -347,15 +381,24 @@ public class Parser {
 		String tipo2 = "";
 		String op = "";
 		String tipo_result = "";
+		Token token1 = new Token("", "");
+		Token token2 = new Token("", "");
+		String aux1 = "";
+		String aux2 = "";
+		String aux3 = "";
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
-			tipo1 = JaDeclarado(this.Lockahead.getLexama(), 0);
+			token1 = this.tabela_simbolo.JaDeclarado(this.Lockahead.getLexama(), 0);
+			tipo1 = token1.getTipo();
+			aux1 = token1.getLexama();
 			if (!tipo1.equals("")) {
 				readToken();
 				if (this.Lockahead.getClasifica().equals(Clasifc.Igual.get())) {
 					op = Clasifc.Igual.get();
 					readToken();
-					tipo2 = isExprAritmetica();
+					token2 = isExprAritmetica();
+					tipo2 = token2.getTipo();
+					aux2 = token2.getLexama();
 					if (!tipo2.equals("")) {
 						if (this.Lockahead.getClasifica().equals(Clasifc.Ponto_Virgula.get())) {
 							readToken();
@@ -370,7 +413,7 @@ public class Parser {
 					disparaErro(erroAtribIgual);
 				}
 			} else {
-				disparaErro(erroVariavelNaoDeclarada);
+				disparaErroVariavel(this.Lockahead.getLexama());
 			}
 		}
 
@@ -378,6 +421,8 @@ public class Parser {
 
 		if (tipo_result.equals("")) {
 			valid = false;
+		} else {
+			System.out.println(aux1 + op + aux2);
 		}
 
 		return valid;
@@ -387,15 +432,26 @@ public class Parser {
 	// *-----> Interação While
 	public boolean isWhile() throws IOException {
 		boolean valid = false;
+		Token token1 = new Token("", "");
+		String label = "";
+		String label_old = "";
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.WHILE.get())) {
 			readToken();
 			if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 				readToken();
-				if (isExprRelacional()) {
+				label = createLabel();
+				System.out.println(label + ":");
+				label_old = label;
+				token1 = isExprRelacional();
+				if (!token1.getLexama().equals("")) {
 					if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
+						label = createLabel();
+						System.out.println("IF " + token1.getLexama() + " == 0 GOTO " + label);
 						readToken();
 						if (isComando()) {
+							System.out.println("GOTO " + label_old);
+							System.out.println(label + ":");
 							valid = true;
 						} else {
 							disparaErro(erroWhileComando);
@@ -417,17 +473,23 @@ public class Parser {
 
 	// *-----> Interação Do-While
 	public boolean isDoWhile() throws IOException {
+		String label = "";
 		boolean valid = false;
+		Token token1 = new Token("", "");
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.DO.get())) {
+			label = createLabel();
+			System.out.println(label + ":");
 			readToken();
 			if (isComando()) {
 				if (this.Lockahead.getClasifica().equals(Clasifc.WHILE.get())) {
 					readToken();
 					if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 						readToken();
-						if (isExprRelacional()) {
+						token1 = isExprRelacional();
+						if (!token1.getLexama().equals("")) {
 							if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
+								System.out.println("IF " + token1.getLexama() + " == 0 GOTO " + label);
 								readToken();
 								if (this.Lockahead.getClasifica().equals(Clasifc.Ponto_Virgula.get())) {
 									readToken();
@@ -459,19 +521,29 @@ public class Parser {
 	}
 
 	// *-----> Expressão Relacional
-	public boolean isExprRelacional() throws IOException {
+	public Token isExprRelacional() throws IOException {
 		boolean valid = false;
+		Token token1 = new Token("", "");
+		Token token2 = new Token("", "");
+		Token token_Result = new Token("", "");
 		String tipo1 = "";
 		String tipo2 = "";
 		String op = "";
 		String tipo_result = "";
+		String aux1 = "";
+		String aux2 = "";
+		String aux3 = "";
 
-		tipo1 = isExprAritmetica();
+		token1 = isExprAritmetica();
+		tipo1 = token1.getTipo();
+		aux1 = token1.getLexama();
 		if (!tipo1.equals("")) {
 			op = isOPRelacional();
 			if (!op.equals("")) {
 				readToken();
-				tipo2 = isExprAritmetica();
+				token2 = isExprAritmetica();
+				tipo2 = token2.getTipo();
+				aux2 = token2.getLexama();
 				if (!tipo2.equals("")) {
 					valid = true;
 				} else {
@@ -486,31 +558,76 @@ public class Parser {
 
 		if (tipo_result.equals("")) {
 			valid = false;
+		} else {
+			aux3 = createTemp();
+			token_Result.setLexama(aux3);
+			token_Result.setTipo(tipo1);
+			System.out.println(aux3 + " = " + aux1 + op + aux2);
 		}
 
-		return valid;
+		return token_Result;
 
 	}
 
 	// *-----> Expressão Aritmetica
-	public String isExprAritmetica() throws IOException {
+	public Token isExprAritmetica() throws IOException {
+		Token token1 = new Token("", "");
+		Token token2 = new Token("", "");
+		Token token_result = new Token("", "");
 		String tipo1 = "";
 		String tipo2 = "";
+		String aux1 = "";
+		String aux2 = "";
+		String aux3 = "";
+		String tipo_aux = "";
 		String op = "";
 		String tipo_result = "";
-		String[] result;
 		boolean soma_dimi = false;
 
-		tipo1 = isTermo();
+		token1 = isTermo();
+		tipo1 = token1.getTipo();
+		aux1 = token1.getLexama();
 		if (!tipo1.equals("")) {
 			// valid = true;
 			do {
-				result = SomaDimin();
-				tipo2 = result[0];
-				op = result[1];
 
-				if (!tipo2.equals("")) {
-					tipo1 = comparaTipo(tipo1, op, tipo2);
+				tipo_aux = "";
+
+				if (this.Lockahead.getClasifica().equals(Clasifc.Soma.get())
+						|| this.Lockahead.getClasifica().equals(Clasifc.Menos.get())) {
+					op = this.Lockahead.getClasifica();
+					readToken();
+					token2 = isTermo();
+					tipo_aux = token2.getTipo();
+					if (tipo_aux.equals("")) {
+						disparaErro(erroAritTermo);
+					}
+				}
+
+				if (!tipo_aux.equals("")) {
+					tipo2 = tipo_aux;
+					aux2 = token2.getLexama();
+					tipo_result = comparaTipo(tipo1, op, tipo2);
+
+					if (tipo_result.equals(Clasifc.Float.get())) {
+						if (!tipo1.equals(tipo_result) && !tipo1.equals(tipo2)) {
+							aux3 = createTemp();
+							tipo1 = tipo_result;
+							System.out.println(aux3 + " = " + "FLOAT" + " (" + aux1 + ")");
+							aux1 = aux3;
+						}
+
+						if (!tipo2.equals(tipo_result) && !tipo2.equals(tipo2)) {
+							aux3 = createTemp();
+							tipo2 = tipo_result;
+							System.out.println(aux3 + " = " + "FLOAT" + " (" + aux2 + ")");
+							aux2 = aux3;
+						}
+						tipo1 = tipo_result;
+					}
+					aux3 = createTemp();
+					System.out.println(aux3 + " = " + aux1 + op + aux2);
+					aux1 = aux3;
 					soma_dimi = true;
 				} else {
 					soma_dimi = false;
@@ -518,30 +635,72 @@ public class Parser {
 			} while (soma_dimi);
 		}
 
-		tipo_result = comparaTipo(tipo1, op, tipo2);
+		if (tipo_result.equals("")) {
+			// tipo_result = comparaTipo(tipo1, op, tipo2);
 
-		return tipo_result;
+		}
+
+		token_result.setLexama(aux1);
+		token_result.setTipo(tipo1);
+		return token_result;
 
 	}
 
 	// *-----> Termo
-	public String isTermo() throws IOException {
+	public Token isTermo() throws IOException {
+		Token token1 = new Token("", "");
+		Token token2 = new Token("", "");
+		Token token_result = new Token("", "");
 		String tipo1 = "";
 		String tipo2 = "";
+		String aux1 = "";
+		String aux2 = "";
+		String aux3 = "";
+		String tipo_aux = "";
 		String op = "";
 		String tipo_result = "";
-		String[] result;
 		boolean mult_div = false;
 
-		tipo1 = isFator();
+		token1 = isFator();
+		tipo1 = token1.getTipo();
+		aux1 = token1.getLexama();
 		if (!tipo1.equals("")) {
 			do {
-				result = multDiv();
-				tipo2 = result[0];
-				op = result[1];
+				tipo_aux = "";
+				if (this.Lockahead.getClasifica().equals(Clasifc.Mult.get())
+						|| this.Lockahead.getClasifica().equals(Clasifc.Div.get())) {
+					op = this.Lockahead.getClasifica();
+					readToken();
+					token2 = isFator();
+					tipo_aux = token2.getTipo();
+					if (tipo_aux.equals("")) {
+						disparaErro(erroAritFator);
+					}
+				}
 
-				if (!tipo2.equals("")) {
-					tipo1 = comparaTipo(tipo1, op, tipo2);
+				if (!tipo_aux.equals("")) {
+					tipo2 = tipo_aux;
+					aux2 = token2.getLexama();
+					tipo_result = comparaTipo(tipo1, op, tipo2);
+
+					if (tipo_result.equals(Clasifc.Float.get())) {
+						if (!tipo1.equals(tipo_result) && !tipo1.equals(tipo2)) {
+							aux3 = createTemp();
+							tipo1 = tipo_result;
+							System.out.println(aux3 + " = " + "FLOAT" + " (" + aux1 + ")");
+							aux1 = aux3;
+						} else if (!tipo2.equals(tipo_result) && !tipo2.equals(tipo1)) {
+							aux3 = createTemp();
+							tipo2 = tipo_result;
+							System.out.println(aux3 + " = " + "FLOAT" + " (" + aux2 + ")");
+							aux2 = aux3;
+						}
+						tipo1 = tipo_result;
+					}
+					aux3 = createTemp();
+					System.out.println(aux3 + " = " + aux1 + op + aux2);
+					aux1 = aux3;
+
 					mult_div = true;
 				} else {
 					mult_div = false;
@@ -550,20 +709,25 @@ public class Parser {
 			} while (mult_div);
 		}
 
-		tipo_result = comparaTipo(tipo1, op, tipo2);
+		if (tipo_result.equals("")) {
+			// tipo_result = comparaTipo(tipo1, op, tipo2);
 
-		return tipo_result;
+		}
+
+		token_result.setLexama(aux1);
+		token_result.setTipo(tipo1);
+		return token_result;
 
 	}
 
 	// *-----> Fator
-	public String isFator() throws IOException {
-		String tipo = "";
+	public Token isFator() throws IOException {
+		Token token = new Token("", "");
 
 		if (this.Lockahead.getClasifica().equals(Clasifc.ID.get())) {
-			tipo = JaDeclarado(this.Lockahead.getLexama(), 0);
-			if (tipo.equals("")) {
-				disparaErro(erroVariavelNaoDeclarada);
+			token = this.tabela_simbolo.JaDeclarado(this.Lockahead.getLexama(), 0);
+			if (token.getTipo().equals("")) {
+				disparaErroVariavel(this.Lockahead.getLexama());
 			} else {
 				readToken();
 			}
@@ -573,14 +737,15 @@ public class Parser {
 				|| this.Lockahead.getClasifica().equals(Clasifc.Float.get())
 				|| this.Lockahead.getClasifica().equals(Clasifc.Char.get())) {
 
-			tipo = this.Lockahead.getClasifica();
+			token = this.Lockahead;
+			token.setTipo(this.Lockahead.getClasifica());
 			readToken();
 		}
 
 		else if (this.Lockahead.getClasifica().equals(Clasifc.Abre_Paren.get())) {
 			readToken();
-			tipo = isExprAritmetica();
-			if (!tipo.equals("")) {
+			token = isExprAritmetica();
+			if (!token.getTipo().equals("")) {
 				if (this.Lockahead.getClasifica().equals(Clasifc.Fecha_Paren.get())) {
 					readToken();
 				} else {
@@ -591,45 +756,7 @@ public class Parser {
 			}
 		}
 
-		return tipo;
-
-	}
-
-	// *-----> Multiplicação e Divisão
-	public String[] multDiv() throws IOException {
-		String tipo = "";
-		String op = "";
-
-		if (this.Lockahead.getClasifica().equals(Clasifc.Mult.get())
-				|| this.Lockahead.getClasifica().equals(Clasifc.Div.get())) {
-			op = this.Lockahead.getClasifica();
-			readToken();
-			tipo = isFator();
-			if (tipo.equals("")) {
-				disparaErro(erroAritFator);
-			}
-		}
-
-		return new String[] { tipo, op };
-
-	}
-
-	// *-----> Soma e Subtração
-	public String[] SomaDimin() throws IOException {
-		String tipo = "";
-		String op = "";
-
-		if (this.Lockahead.getClasifica().equals(Clasifc.Soma.get())
-				|| this.Lockahead.getClasifica().equals(Clasifc.Menos.get())) {
-			op = this.Lockahead.getClasifica();
-			readToken();
-			tipo = isTermo();
-			if (tipo.equals("")) {
-				disparaErro(erroAritTermo);
-			}
-		}
-
-		return new String[] { tipo, op };
+		return token;
 
 	}
 
@@ -650,44 +777,10 @@ public class Parser {
 
 	}
 
-	public void MontaTabelaSimbolo() {
-		String tipo = "";
-		Simbolo sb = new Simbolo("", this.LastTipo, this.bloco);
-
-		// Validar se a variável já foi declarada
-		tipo = JaDeclarado(this.Lockahead.getLexama(), this.bloco);
-		if (tipo.equals("")) {
-			sb.setLexama(this.Lockahead.getLexama()); // Guardar Valor na tabela de símbolos para o semantico
-			this.tabela_simbolo.push(sb);
-		} else {
-			// Erro Variável já declarada
-			disparaErro(erroVariavélJaDeclarada);
-		}
-
-	}
-
-	// *-----> desempilha variaveis da tabela de simbolos quando sai do bloco
-	public void desempilhaBloco(int Bloco) {
-		boolean notBloco = false;
-		Simbolo sb = new Simbolo("", "", 0);
-		do {
-			if (!this.tabela_simbolo.isEmpty()) {
-				sb = this.tabela_simbolo.pop();
-				if (sb.getBloco() != bloco) {
-					this.tabela_simbolo.push(sb);
-					notBloco = true;
-				}
-			} else {
-				notBloco = true;
-			}
-
-		} while (!notBloco);
-	}
-
 	// Validar se variavéis são compativeis e faz conversão de tipo
 	public String comparaTipo(String tipo1, String op, String tipo2) {
 		String tipo_result = "";
-		
+
 		if (!op.equals("")) {
 			if ((tipo1.equals(Clasifc.Char.get()) && !tipo2.equals(Clasifc.Char.get()))
 					|| (!tipo1.equals(Clasifc.Char.get()) && tipo2.equals(Clasifc.Char.get()))) {
@@ -731,69 +824,6 @@ public class Parser {
 
 	}
 
-	// Valida se a variável foi declarada
-	public String JaDeclarado(String lexama, int bloco) {
-		String tipo = "";
-		boolean exit = false;
-		Simbolo sb = new Simbolo("", "", 0);
-		Stack<Simbolo> tabela_aux = new Stack<Simbolo>();
-
-		// Fazer busca considerado o bloco para pesquisar se a variavel já existe no
-		// mesmo bloco
-		if (bloco != 0) {
-			// Desempilhar a pilha ate encontrar a variavel declarada
-			do {
-				if (!this.tabela_simbolo.isEmpty()) {
-					sb = this.tabela_simbolo.pop();
-					tabela_aux.push(sb);
-					if (sb.getLexama().equals(lexama) && sb.getBloco() == bloco) {
-						exit = true;
-						tipo = sb.getTipo();
-					}
-				} else {
-					exit = true;
-				}
-
-			} while (!exit);
-		}
-
-		// Fazer a busca em toda tabela de simbolo
-		else {
-			// Desempilhar a pilha ate encontrar a variavel declarada
-			do {
-				if (!this.tabela_simbolo.isEmpty()) {
-					sb = this.tabela_simbolo.pop();
-					tabela_aux.push(sb);
-					if (sb.getLexama().equals(lexama)) {
-						exit = true;
-						tipo = sb.getTipo();
-					}
-				} else {
-					exit = true;
-				}
-
-			} while (!exit);
-		}
-
-		// Empilhar a pilha novamente
-		exit = false;
-
-		do {
-			if (!tabela_aux.isEmpty()) {
-
-				sb = tabela_aux.pop();
-				this.tabela_simbolo.push(sb);
-
-			} else {
-				exit = true;
-			}
-
-		} while (!exit);
-
-		return tipo;
-
-	}
-
 	// *Tipo
 	public String setarTipo(String palavra_reservada) {
 		String tipo = "";
@@ -809,7 +839,7 @@ public class Parser {
 		return tipo;
 	}
 
-	// *-----> Dispara Error
+	// *-----> Dispara Error 
 	public void disparaErro(String erro) {
 
 		int Linha = this.linha_lida;
@@ -819,4 +849,16 @@ public class Parser {
 				+ lexama + " Mensagem: " + erro);
 		System.exit(-1);
 	}
+	
+	// *-----> Dispara Error Variável não declarada
+	public void disparaErroVariavel(String Lexama) {
+
+		int Linha = this.linha_lida;
+		int Coluna = this.coluna_lida;
+		String lexama = this.LastToken.getLexama();
+		System.out.println("ERRO na Linha: " + Linha + ", " + "Coluna: " + Coluna + ", " + "Ultimo token lido: "
+				+ lexama + " Mensagem: " + "Variável '" + Lexama + "' não foi declarada");
+		System.exit(-1);
+	}
+
 }
